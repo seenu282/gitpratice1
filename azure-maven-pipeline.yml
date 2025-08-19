@@ -1,0 +1,46 @@
+trigger:
+- main   # or your default branch
+
+pool:
+  vmImage: 'ubuntu-latest'   # You can also use windows-latest
+
+steps:
+# Checkout your code
+- task: Checkout@1
+  displayName: 'Checkout source code'
+
+# Setup JDK
+- task: JavaToolInstaller@0
+  inputs:
+    versionSpec: '11'          # Java version (e.g., 8, 11, 17)
+    jdkArchitecture: 'x64'
+    jdkSourceOption: 'PreInstalled'
+
+# Cache Maven dependencies (for faster builds)
+- task: Cache@2
+  inputs:
+    key: 'maven | "$(Agent.OS)" | **/pom.xml'
+    restoreKeys: |
+      maven | "$(Agent.OS)"
+    path: ~/.m2/repository
+
+# Run Maven Build
+- task: Maven@3
+  inputs:
+    mavenPomFile: 'pom.xml'
+    goals: 'clean install'
+    options: '-Dmaven.test.skip=true'   # Remove this if you want tests
+    javaHomeOption: 'JDKVersion'
+    jdkVersionOption: '1.11'
+    publishJUnitResults: true
+    testResultsFiles: '**/surefire-reports/TEST-*.xml'
+    mavenOptions: '-Xmx1024m'
+    mavenVersionOption: 'Default'
+
+# Publish build artifacts (e.g., JAR/WAR files)
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(System.DefaultWorkingDirectory)/target'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
+
